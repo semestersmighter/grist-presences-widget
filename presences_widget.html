@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #f9f9f7; color: #1a1a1a; font-size: 14px; padding: 24px; line-height: 1.5;
+    }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 24px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .calendar-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;
+    }
+    .month-nav { display: flex; gap: 16px; align-items: center; }
+    .btn-nav {
+      width: 36px; height: 36px; border: 1px solid #d1d5db; background: white;
+      border-radius: 6px; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; color: #6b7280; font-weight: 600; font-size: 16px;
+    }
+    .btn-nav:hover { background: #f3f4f6; border-color: #9ca3af; color: #1a1a1a; }
+    .month-label { font-weight: 600; font-size: 16px; min-width: 180px; text-align: center; }
+    .btn-today {
+      padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 6px;
+      cursor: pointer; font-size: 12px; font-weight: 600; color: #6b7280;
+    }
+    .btn-today:hover { background: #f3f4f6; border-color: #9ca3af; }
+    .weekday-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 8px; }
+    .weekday-header {
+      text-align: center; font-size: 12px; font-weight: 600; color: #6b7280;
+      padding: 8px 0; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 24px; }
+    .day {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      border: 1px solid #e5e7eb; border-radius: 8px; background: white; color: #1a1a1a;
+      cursor: pointer; font-weight: 500; font-size: 14px; user-select: none; position: relative;
+    }
+    .day.other-month { color: #d1d5db; background: #fafafa; cursor: default; border-color: #f3f4f6; }
+    .day.weekend { background: #f9f9f7; }
+    .day.today { border: 2px solid #6b7280; }
+    .day:hover:not(.other-month) { border-color: #9ca3af; background: #f3f4f6; }
+    .day.has-persons { background: #16a34a; border-color: #16a34a; color: white; font-weight: 600; }
+    .day.has-persons:hover:not(.other-month) { background: #15803d; border-color: #15803d; }
+    .person-count {
+      position: absolute; bottom: 2px; right: 2px; background: #ef4444; color: white;
+      border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center;
+      justify-content: center; font-size: 10px; font-weight: 700;
+    }
+    .day.has-persons .person-count { background: rgba(255,255,255,0.3); }
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: white; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      width: 92%; max-width: 460px; padding: 24px;
+    }
+    .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .modal-subtitle { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+    .modal-content { max-height: 60vh; overflow-y: auto; margin-bottom: 20px; }
+    .person-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 8px;
+      border-radius: 6px; background: #f9f9f7;
+    }
+    .person-item label { flex: 1; font-weight: 500; }
+    .person-item select {
+      flex-basis: 190px; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db;
+      font-size: 13px; background: white; color: #1a1a1a;
+    }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn { padding: 10px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: #1a1a1a; color: white; }
+    .btn-primary:hover { background: #333; }
+    .btn-secondary { background: #f3f4f6; color: #1a1a1a; border: 1px solid #d1d5db; }
+    .btn-secondary:hover { background: #e5e7eb; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    #status {
+      margin-top: 16px; padding: 12px 14px; border-radius: 6px; font-size: 13px; display: none;
+      border: 1px solid #e5e7eb; background: #f9f9f7; color: #6b7280;
+    }
+    #status.show { display: block; }
+    #status.ok { background: #dcfce7; border-color: #86efac; color: #166534; }
+    #status.error { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+    #status.info { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Présences</h1>
+
+  <div class="calendar-header">
+    <div class="month-nav">
+      <button class="btn-nav" id="prev-month">←</button>
+      <div class="month-label" id="month-label"></div>
+      <button class="btn-nav" id="next-month">→</button>
+    </div>
+    <button class="btn-today" id="btn-today">Aujourd'hui</button>
+  </div>
+
+  <div class="weekday-headers">
+    <div class="weekday-header">Lun</div><div class="weekday-header">Mar</div>
+    <div class="weekday-header">Mer</div><div class="weekday-header">Jeu</div>
+    <div class="weekday-header">Ven</div><div class="weekday-header">Sam</div>
+    <div class="weekday-header">Dim</div>
+  </div>
+
+  <div class="calendar-grid" id="calendar"></div>
+  <div id="status"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-subtitle" id="modal-subtitle"></div>
+    <div class="modal-content" id="modal-content"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="modal-cancel">Fermer</button>
+      <button class="btn btn-danger" id="modal-delete">Vider ce jour</button>
+      <button class="btn btn-primary" id="modal-save">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  grist.ready({ requiredAccess: 'full' });
+
+  const STATUTS = [
+    "DISPONIBLE", "DER EN COURS", "DER SINGÉE", "ROC ENVOYÉ", "ROC VALIDÉ",
+    "ROC REFUSÉ", "ROC ANNULÉ", "ROC SANS RÉPONSE", "SERVICE FAIT",
+    "SERVICE NON FAIT", "INDISPONIBLE", "MALADE", "MISSION"
+  ];
+
+  const MOIS_ASCII = [
+    "", "Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin",
+    "Juillet", "Aout", "Septembre", "Octobre", "Novembre", "Decembre"
+  ];
+  const MOIS_LABEL = [
+    "", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+  ];
+
+  const state = {
+    personnel: [],       // { id, nom, prenom, grade }
+    mois: [],            // { id, annee, mois, nbJours }
+    currentYear: 0,
+    currentMonth: 0,
+    today: new Date(),
+    monthTableData: null,   // dernier fetch de la table du mois affiché (ou null si table absente)
+    monthTableId: null,
+    selectedDay: null,
+  };
+
+  const calendarDiv = document.getElementById('calendar');
+  const monthLabel = document.getElementById('month-label');
+  const modalOverlay = document.getElementById('modal-overlay');
+  const modalTitle = document.getElementById('modal-title');
+  const modalSubtitle = document.getElementById('modal-subtitle');
+  const modalContent = document.getElementById('modal-content');
+  const statusDiv = document.getElementById('status');
+
+  function dayCol(d) { return String(d).padStart(2, '0'); }
+  function tableIdFor(annee, mois) { return `${MOIS_ASCII[mois]}_${annee}`; }
+
+  async function init() {
+    showStatus('Chargement…', 'info');
+    try {
+      const [personnelTable, moisTable, tauxTable] = await Promise.all([
+        grist.docApi.fetchTable('Personnel'),
+        grist.docApi.fetchTable('Mois'),
+        grist.docApi.fetchTable('Taux'),
+      ]);
+
+      const tauxLabel = {};
+      for (let i = 0; i < tauxTable.id.length; i++) tauxLabel[tauxTable.id[i]] = tauxTable.GRADE[i];
+
+      state.personnel = personnelTable.id.map((id, i) => {
+        const gradeRef = Array.isArray(personnelTable.GRADE[i]) ? personnelTable.GRADE[i][0] : personnelTable.GRADE[i];
+        return { id, nom: personnelTable.NOM[i], prenom: personnelTable.PRENOM[i], grade: tauxLabel[gradeRef] || '' };
+      });
+
+      state.mois = moisTable.id.map((id, i) => ({
+        id, annee: moisTable.Annee[i], mois: moisTable.Mois[i], nbJours: moisTable.NbJours[i],
+      }));
+
+      state.currentYear = state.today.getFullYear();
+      state.currentMonth = state.today.getMonth() + 1;
+
+      await renderCalendar();
+      showStatus('Prêt.', 'ok');
+      setTimeout(hideStatus, 1200);
+
+      document.getElementById('prev-month').addEventListener('click', () => navigateMonth(-1));
+      document.getElementById('next-month').addEventListener('click', () => navigateMonth(1));
+      document.getElementById('btn-today').addEventListener('click', goToToday);
+      document.getElementById('modal-cancel').addEventListener('click', closeModal);
+      document.getElementById('modal-delete').addEventListener('click', clearDay);
+      document.getElementById('modal-save').addEventListener('click', saveDay);
+    } catch (e) {
+      console.error(e);
+      showStatus(`Erreur : ${e.message}`, 'error');
+    }
+  }
+
+  // Charge (sans créer) la table du mois affiché, pour savoir quels jours ont du monde.
+  async function loadMonthTable(annee, mois) {
+    const tableId = tableIdFor(annee, mois);
+    state.monthTableId = tableId;
+    try {
+      state.monthTableData = await grist.docApi.fetchTable(tableId);
+    } catch (e) {
+      state.monthTableData = null; // la table n'existe pas encore
+    }
+  }
+
+  function countPersonsOnDay(day) {
+    if (!state.monthTableData) return 0;
+    const col = state.monthTableData[dayCol(day)];
+    if (!col) return 0;
+    return col.filter(v => v && v !== '').length;
+  }
+
+  async function renderCalendar() {
+    updateMonthLabel();
+    const moisData = state.mois.find(m => m.annee === state.currentYear && m.mois === state.currentMonth);
+    if (!moisData) {
+      calendarDiv.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#9ca3b8;">Mois non configuré dans la table Mois</p>';
+      return;
+    }
+
+    await loadMonthTable(state.currentYear, state.currentMonth);
+
+    const firstDay = new Date(state.currentYear, state.currentMonth - 1, 1);
+    const lastDay = new Date(state.currentYear, state.currentMonth, 0);
+    const offset = (firstDay.getDay() + 6) % 7;
+    const nbJours = lastDay.getDate();
+
+    calendarDiv.innerHTML = '';
+
+    const prevMonthLastDay = new Date(state.currentYear, state.currentMonth - 1, 0).getDate();
+    for (let i = prevMonthLastDay - offset + 1; i <= prevMonthLastDay; i++) {
+      calendarDiv.appendChild(createDayElement(i, true));
+    }
+    for (let j = 1; j <= nbJours; j++) {
+      calendarDiv.appendChild(createDayElement(j, false));
+    }
+    const remaining = (7 - (calendarDiv.children.length % 7)) % 7;
+    for (let i = 1; i <= remaining; i++) {
+      calendarDiv.appendChild(createDayElement(i, true));
+    }
+  }
+
+  function createDayElement(jour, isOtherMonth) {
+    const div = document.createElement('div');
+    div.className = 'day';
+    if (isOtherMonth) {
+      div.classList.add('other-month');
+      div.textContent = jour;
+      return div;
+    }
+    const currentDate = new Date(state.currentYear, state.currentMonth - 1, jour);
+    const today = new Date(state.today.getFullYear(), state.today.getMonth(), state.today.getDate());
+    if (currentDate.getTime() === today.getTime()) div.classList.add('today');
+    const dow = currentDate.getDay();
+    if (dow === 0 || dow === 6) div.classList.add('weekend');
+
+    const count = countPersonsOnDay(jour);
+    if (count > 0) div.classList.add('has-persons');
+
+    const numberDiv = document.createElement('div');
+    numberDiv.textContent = jour;
+    div.appendChild(numberDiv);
+    if (count > 0) {
+      const badge = document.createElement('div');
+      badge.className = 'person-count';
+      badge.textContent = count;
+      div.appendChild(badge);
+    }
+    div.addEventListener('click', () => openModal(jour));
+    return div;
+  }
+
+  function updateMonthLabel() {
+    monthLabel.textContent = `${MOIS_LABEL[state.currentMonth]} ${state.currentYear}`;
+  }
+
+  function navigateMonth(delta) {
+    let m = state.currentMonth + delta, y = state.currentYear;
+    if (m > 12) { m = 1; y++; } else if (m < 1) { m = 12; y--; }
+    state.currentMonth = m; state.currentYear = y;
+    renderCalendar();
+  }
+
+  function goToToday() {
+    state.currentYear = state.today.getFullYear();
+    state.currentMonth = state.today.getMonth() + 1;
+    renderCalendar();
+  }
+
+  function currentValueFor(personIdx, jour) {
+    if (!state.monthTableData) return '';
+    const col = state.monthTableData[dayCol(jour)];
+    const ids = state.monthTableData.IdPersonnel;
+    const p = state.personnel[personIdx];
+    for (let i = 0; i < state.monthTableData.id.length; i++) {
+      if (ids[i] === p.id) return col ? (col[i] || '') : '';
+    }
+    return '';
+  }
+
+  function openModal(jour) {
+    state.selectedDay = jour;
+    modalTitle.textContent = `${jour} ${MOIS_LABEL[state.currentMonth]} ${state.currentYear}`;
+    modalSubtitle.textContent = 'Statut de chaque personne pour ce jour';
+
+    modalContent.innerHTML = '';
+    state.personnel.forEach((p, idx) => {
+      const current = currentValueFor(idx, jour);
+      const div = document.createElement('div');
+      div.className = 'person-item';
+
+      const label = document.createElement('label');
+      label.textContent = `${p.nom} ${p.prenom}`;
+      div.appendChild(label);
+
+      const select = document.createElement('select');
+      select.dataset.personIdx = idx;
+      const optNone = document.createElement('option');
+      optNone.value = ''; optNone.textContent = '— Aucun —';
+      select.appendChild(optNone);
+      STATUTS.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        if (s === current) opt.selected = true;
+        select.appendChild(opt);
+      });
+      if (!current) optNone.selected = true;
+      div.appendChild(select);
+
+      modalContent.appendChild(div);
+    });
+
+    modalOverlay.classList.add('show');
+  }
+
+  function closeModal() {
+    modalOverlay.classList.remove('show');
+    state.selectedDay = null;
+  }
+
+  async function ensureMonthTable(moisData) {
+    const tableId = tableIdFor(moisData.annee, moisData.mois);
+    try {
+      await grist.docApi.fetchTable(tableId);
+      return tableId; // existe déjà
+    } catch (e) {
+      const columns = [
+        { id: 'IdPersonnel', type: 'Int' },
+        { id: 'Grade', type: 'Text' },
+        { id: 'Nom', type: 'Text' },
+        { id: 'Prenom', type: 'Text' },
+      ];
+      for (let d = 1; d <= moisData.nbJours; d++) columns.push({ id: dayCol(d), type: 'Text' });
+      await grist.docApi.applyUserActions([['AddTable', tableId, columns]]);
+      return tableId;
+    }
+  }
+
+  async function saveDay() {
+    const jour = state.selectedDay;
+    if (!jour) return;
+    const moisData = state.mois.find(m => m.annee === state.currentYear && m.mois === state.currentMonth);
+    if (!moisData) return;
+
+    showStatus('Sauvegarde…', 'info');
+    try {
+      const selects = modalContent.querySelectorAll('select');
+      const desired = Array.from(selects).map(s => ({ idx: parseInt(s.dataset.personIdx), value: s.value }));
+
+      // Si rien à écrire ce jour et que la table n'existe pas encore, inutile de la créer.
+      const needTable = desired.some(d => d.value !== '') || state.monthTableData;
+      if (!needTable) { showStatus('Rien à enregistrer.', 'info'); return; }
+
+      const tableId = await ensureMonthTable(moisData);
+      const data = await grist.docApi.fetchTable(tableId);
+      const col = dayCol(jour);
+      const actions = [];
+
+      for (const { idx, value } of desired) {
+        const p = state.personnel[idx];
+        let rowIndex = -1;
+        for (let i = 0; i < data.id.length; i++) {
+          if (data.IdPersonnel[i] === p.id) { rowIndex = i; break; }
+        }
+
+        if (rowIndex === -1) {
+          if (value !== '') {
+            actions.push(['AddRecord', tableId, null, { IdPersonnel: p.id, Grade: p.grade, Nom: p.nom, Prenom: p.prenom, [col]: value }]);
+          }
+          continue;
+        }
+
+        const rowId = data.id[rowIndex];
+        if (value === '') {
+          // vérifier si la ligne devient entièrement vide après suppression de ce jour
+          let stillHasSomething = false;
+          for (let d = 1; d <= moisData.nbJours; d++) {
+            const c = dayCol(d);
+            if (c === col) continue;
+            const v = data[c] ? data[c][rowIndex] : '';
+            if (v) { stillHasSomething = true; break; }
+          }
+          if (stillHasSomething) {
+            actions.push(['UpdateRecord', tableId, rowId, { [col]: '' }]);
+          } else {
+            actions.push(['RemoveRecord', tableId, rowId]);
+          }
+        } else {
+          actions.push(['UpdateRecord', tableId, rowId, { [col]: value }]);
+        }
+      }
+
+      if (actions.length > 0) await grist.docApi.applyUserActions(actions);
+
+      await loadMonthTable(state.currentYear, state.currentMonth);
+      await renderCalendar();
+      showStatus('Enregistré !', 'ok');
+      setTimeout(hideStatus, 1500);
+      closeModal();
+    } catch (e) {
+      console.error(e);
+      showStatus(`Erreur : ${e.message}`, 'error');
+    }
+  }
+
+  async function clearDay() {
+    const jour = state.selectedDay;
+    if (!jour) return;
+    if (!confirm('Vider le statut de tout le monde pour ce jour ?')) return;
+
+    const selects = modalContent.querySelectorAll('select');
+    selects.forEach(s => { s.value = ''; });
+    await saveDay();
+  }
+
+  function showStatus(msg, type = 'info') {
+    statusDiv.textContent = msg;
+    statusDiv.className = `show ${type}`;
+  }
+  function hideStatus() { statusDiv.classList.remove('show'); }
+
+  init();
+</script>
+</body>
+</html>
