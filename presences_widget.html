@@ -166,7 +166,8 @@
   const modalContent = document.getElementById('modal-content');
   const statusDiv = document.getElementById('status');
 
-  function dayCol(d) { return String(d).padStart(2, '0'); }
+  function dayCol(d) { return 'J' + String(d).padStart(2, '0'); }
+  function dayLabel(d) { return String(d).padStart(2, '0'); }
   function tableIdFor(annee, mois) { return `${MOIS_ASCII[mois]}_${annee}`; }
 
   async function init() {
@@ -367,7 +368,7 @@
         { id: 'Nom', type: 'Text' },
         { id: 'Prenom', type: 'Text' },
       ];
-      for (let d = 1; d <= moisData.nbJours; d++) columns.push({ id: dayCol(d), type: 'Text' });
+      for (let d = 1; d <= moisData.nbJours; d++) columns.push({ id: dayCol(d), type: 'Text', label: dayLabel(d) });
       await grist.docApi.applyUserActions([['AddTable', tableId, columns]]);
       return tableId;
     }
