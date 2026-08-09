@@ -74,7 +74,8 @@
       font-size: 13px; background: white; color: #1a1a1a;
     }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
-    .quick-actions { display: flex; gap: 8px; margin-bottom: 16px; }
+    .quick-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .quick-actions-left { display: flex; gap: 8px; }
     .quick-btn {
       position: relative; width: 36px; height: 36px; border: none; border-radius: 6px;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
@@ -90,6 +91,7 @@
     .quick-btn.orange { background: #f97316; }
     .quick-btn.yellow { background: #facc15; color: #1a1a1a; }
     .quick-btn.green { background: #16a34a; }
+    .quick-btn.sf { font-size: 11px; font-weight: 800; }
     .btn { padding: 10px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
     .btn-primary { background: #1a1a1a; color: white; }
     .btn-primary:hover { background: #333; }
@@ -137,14 +139,19 @@
     <div class="modal-title" id="modal-title"></div>
     <div class="modal-subtitle" id="modal-subtitle"></div>
     <div class="quick-actions">
-      <button type="button" class="quick-btn orange" data-statut="DER EN COURS" data-depuis="DISPONIBLE">
-        <span class="tooltip">DER en cours</span>
-      </button>
-      <button type="button" class="quick-btn yellow" data-statut="DER SIGNÉE" data-depuis="DER EN COURS">
-        <span class="tooltip">DER signée</span>
-      </button>
-      <button type="button" class="quick-btn green" data-statut="ROC ENVOYÉ" data-depuis="DER SIGNÉE">
-        <span class="tooltip">ROC faite</span>
+      <div class="quick-actions-left">
+        <button type="button" class="quick-btn orange" data-statut="DER EN COURS" data-depuis="DISPONIBLE">
+          <span class="tooltip">DER en cours</span>
+        </button>
+        <button type="button" class="quick-btn yellow" data-statut="DER SIGNÉE" data-depuis="DER EN COURS">
+          <span class="tooltip">DER signée</span>
+        </button>
+        <button type="button" class="quick-btn green" data-statut="ROC ENVOYÉ" data-depuis="DER SIGNÉE">
+          <span class="tooltip">ROC faite</span>
+        </button>
+      </div>
+      <button type="button" class="quick-btn green sf" data-statut="SERVICE FAIT" data-depuis="ROC VALIDÉ">
+        SF<span class="tooltip">Service fait</span>
       </button>
     </div>
     <div class="modal-content" id="modal-content"></div>
