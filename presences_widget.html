@@ -140,11 +140,11 @@
       <button type="button" class="quick-btn orange" data-statut="DER EN COURS" data-depuis="DISPONIBLE">
         <span class="tooltip">DER en cours</span>
       </button>
-      <button type="button" class="quick-btn yellow" data-statut="DER SINGÉE" data-depuis="DER EN COURS">
+      <button type="button" class="quick-btn yellow" data-statut="DER SIGNÉE" data-depuis="DER EN COURS">
         <span class="tooltip">DER signée</span>
       </button>
-      <button type="button" class="quick-btn green" data-statut="ROC ENVOYÉ" data-depuis="DER SINGÉE">
-        V<span class="tooltip">ROC faite</span>
+      <button type="button" class="quick-btn green" data-statut="ROC ENVOYÉ" data-depuis="DER SIGNÉE">
+        <span class="tooltip">ROC faite</span>
       </button>
     </div>
     <div class="modal-content" id="modal-content"></div>
@@ -160,7 +160,7 @@
   grist.ready({ requiredAccess: 'full' });
 
   const STATUTS = [
-    "DISPONIBLE", "DER EN COURS", "DER SINGÉE", "ROC ENVOYÉ", "ROC VALIDÉ",
+    "DISPONIBLE", "DER EN COURS", "DER SIGNÉE", "ROC ENVOYÉ", "ROC VALIDÉ",
     "ROC REFUSÉ", "ROC ANNULÉ", "ROC SANS RÉPONSE", "SERVICE FAIT",
     "SERVICE NON FAIT", "INDISPONIBLE", "MALADE", "MISSION"
   ];
