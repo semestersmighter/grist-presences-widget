@@ -535,10 +535,8 @@
 
         if (noms.length === 0) continue;
 
-        body += `<h2 style="font-family:Calibri;font-size:14pt;margin-top:16pt;">${d} ${MOIS_LABEL[state.currentMonth]} ${state.currentYear}</h2>`;
-        body += '<ul>';
-        noms.forEach(n => { body += `<li style="font-family:Calibri;font-size:11pt;">${escapeHtml(n)}</li>`; });
-        body += '</ul>';
+        body += `<p style="font-family:Calibri;font-size:12pt;font-weight:bold;margin-top:14pt;margin-bottom:4pt;">- Le ${d} ${MOIS_LABEL[state.currentMonth]} ${state.currentYear} ;</p>`;
+        noms.forEach(n => { body += `<p style="font-family:Calibri;font-size:11pt;margin:0;">${escapeHtml(n)}</p>`; });
       }
 
       downloadAsWord(body, `Disponibilites_${MOIS_ASCII[state.currentMonth]}_${state.currentYear}.doc`);
