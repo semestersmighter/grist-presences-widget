@@ -381,7 +381,7 @@
       div.className = 'person-item';
 
       const label = document.createElement('label');
-      label.textContent = `${p.nom} ${p.prenom}`;
+      label.textContent = p.entier;
       div.appendChild(label);
 
       const select = document.createElement('select');
@@ -522,8 +522,6 @@
       let body = `<h1 style="font-family:Calibri;font-size:20pt;">Disponibilités — ${MOIS_LABEL[state.currentMonth]} ${state.currentYear}</h1>`;
 
       for (let d = 1; d <= moisData.nbJours; d++) {
-        body += `<h2 style="font-family:Calibri;font-size:14pt;margin-top:16pt;">${d} ${MOIS_LABEL[state.currentMonth]} ${state.currentYear}</h2>`;
-
         const noms = [];
         if (data) {
           const col = data[dayCol(d)] || [];
@@ -535,13 +533,12 @@
           }
         }
 
-        if (noms.length === 0) {
-          body += `<p style="font-family:Calibri;font-size:11pt;color:#888888;">Personne de disponible</p>`;
-        } else {
-          body += '<ul>';
-          noms.forEach(n => { body += `<li style="font-family:Calibri;font-size:11pt;">${escapeHtml(n)}</li>`; });
-          body += '</ul>';
-        }
+        if (noms.length === 0) continue;
+
+        body += `<h2 style="font-family:Calibri;font-size:14pt;margin-top:16pt;">${d} ${MOIS_LABEL[state.currentMonth]} ${state.currentYear}</h2>`;
+        body += '<ul>';
+        noms.forEach(n => { body += `<li style="font-family:Calibri;font-size:11pt;">${escapeHtml(n)}</li>`; });
+        body += '</ul>';
       }
 
       downloadAsWord(body, `Disponibilites_${MOIS_ASCII[state.currentMonth]}_${state.currentYear}.doc`);
