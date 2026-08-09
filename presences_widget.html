@@ -47,6 +47,11 @@
     }
     .day.other-month { color: #d1d5db; background: #fafafa; cursor: default; border-color: #f3f4f6; }
     .day.weekend { background: #f9f9f7; }
+    .day-we-badge {
+      position: absolute; top: 3px; left: 3px; right: 3px;
+      font-size: 8px; font-weight: 700; text-align: center; letter-spacing: 0.3px;
+      background: #ede9fe; color: #6d28d9; border-radius: 3px; padding: 1px 0;
+    }
     .day.today { border: 2px solid #6b7280; }
     .day:hover:not(.other-month) { border-color: #9ca3af; background: #f3f4f6; }
     .day.has-persons { background: #16a34a; border-color: #16a34a; color: white; font-weight: 600; }
@@ -201,6 +206,20 @@
   function dayLabel(d) { return String(d).padStart(2, '0'); }
   function tableIdFor(annee, mois) { return `${MOIS_ASCII[mois]}_${annee}`; }
 
+  function estWeekendCIE(annee, mois, jour) {
+    const date = new Date(annee, mois - 1, jour);
+    const dow = date.getDay();
+    if (dow !== 6 && dow !== 0) return false;
+    const nbJours = new Date(annee, mois, 0).getDate();
+    const samedis = [];
+    for (let d = 1; d <= nbJours; d++) {
+      if (new Date(annee, mois - 1, d).getDay() === 6) samedis.push(d);
+    }
+    const deuxiemeSamedi = samedis[1];
+    if (!deuxiemeSamedi) return false;
+    return jour === deuxiemeSamedi || jour === deuxiemeSamedi + 1;
+  }
+
   async function init() {
     showStatus('Chargement…', 'info');
     try {
@@ -315,7 +334,15 @@
     const today = new Date(state.today.getFullYear(), state.today.getMonth(), state.today.getDate());
     if (currentDate.getTime() === today.getTime()) div.classList.add('today');
     const dow = currentDate.getDay();
-    if (dow === 0 || dow === 6) div.classList.add('weekend');
+    if (dow === 0 || dow === 6) {
+      div.classList.add('weekend');
+    }
+    if (estWeekendCIE(state.currentYear, state.currentMonth, jour)) {
+      const weBadge = document.createElement('div');
+      weBadge.className = 'day-we-badge';
+      weBadge.textContent = 'WE CIE';
+      div.appendChild(weBadge);
+    }
 
     const count = countPersonsOnDay(jour);
     if (count > 0) div.classList.add('has-persons');
