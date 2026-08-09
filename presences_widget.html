@@ -29,6 +29,11 @@
       cursor: pointer; font-size: 12px; font-weight: 600; color: #6b7280;
     }
     .btn-today:hover { background: #f3f4f6; border-color: #9ca3af; }
+    .btn-export {
+      padding: 8px 12px; border: 1px solid #16a34a; background: #16a34a; color: white;
+      border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; margin-left: 8px;
+    }
+    .btn-export:hover { background: #15803d; }
     .weekday-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 8px; }
     .weekday-header {
       text-align: center; font-size: 12px; font-weight: 600; color: #6b7280;
@@ -121,6 +126,7 @@
       <button class="btn-nav" id="next-month">→</button>
     </div>
     <button class="btn-today" id="btn-today">Aujourd'hui</button>
+    <button class="btn-export" id="btn-export">Exporter les disponibilités (Word)</button>
   </div>
 
   <div class="weekday-headers">
@@ -218,7 +224,13 @@
 
       state.personnel = personnelTable.id.map((id, i) => {
         const gradeRef = Array.isArray(personnelTable.GRADE[i]) ? personnelTable.GRADE[i][0] : personnelTable.GRADE[i];
-        return { id, nom: personnelTable.NOM[i], prenom: personnelTable.PRENOM[i], grade: tauxLabel[gradeRef] || '' };
+        return {
+          id,
+          nom: personnelTable.NOM[i],
+          prenom: personnelTable.PRENOM[i],
+          grade: tauxLabel[gradeRef] || '',
+          entier: personnelTable.ENTIER ? personnelTable.ENTIER[i] : `${personnelTable.NOM[i]} ${personnelTable.PRENOM[i]}`,
+        };
       });
 
       state.mois = moisTable.id.map((id, i) => ({
@@ -235,6 +247,7 @@
       document.getElementById('prev-month').addEventListener('click', () => navigateMonth(-1));
       document.getElementById('next-month').addEventListener('click', () => navigateMonth(1));
       document.getElementById('btn-today').addEventListener('click', goToToday);
+      document.getElementById('btn-export').addEventListener('click', exportDisponibles);
       document.getElementById('modal-cancel').addEventListener('click', closeModal);
       document.getElementById('modal-delete').addEventListener('click', clearDay);
       document.getElementById('modal-save').addEventListener('click', saveDay);
@@ -495,6 +508,70 @@
     const selects = modalContent.querySelectorAll('select');
     selects.forEach(s => { s.value = ''; });
     await saveDay();
+  }
+
+  async function exportDisponibles() {
+    const moisData = state.mois.find(m => m.annee === state.currentYear && m.mois === state.currentMonth);
+    if (!moisData) { showStatus('Mois non configuré.', 'error'); return; }
+
+    showStatus('Génération du document…', 'info');
+    try {
+      await loadMonthTable(state.currentYear, state.currentMonth);
+      const data = state.monthTableData;
+
+      let body = `<h1 style="font-family:Calibri;font-size:20pt;">Disponibilités — ${MOIS_LABEL[state.currentMonth]} ${state.currentYear}</h1>`;
+
+      for (let d = 1; d <= moisData.nbJours; d++) {
+        body += `<h2 style="font-family:Calibri;font-size:14pt;margin-top:16pt;">${d} ${MOIS_LABEL[state.currentMonth]} ${state.currentYear}</h2>`;
+
+        const noms = [];
+        if (data) {
+          const col = data[dayCol(d)] || [];
+          for (let i = 0; i < data.id.length; i++) {
+            if (col[i] === 'DISPONIBLE') {
+              const p = state.personnel.find(pp => pp.id === data.IdPersonnel[i]);
+              noms.push(p ? p.entier : `#${data.IdPersonnel[i]}`);
+            }
+          }
+        }
+
+        if (noms.length === 0) {
+          body += `<p style="font-family:Calibri;font-size:11pt;color:#888888;">Personne de disponible</p>`;
+        } else {
+          body += '<ul>';
+          noms.forEach(n => { body += `<li style="font-family:Calibri;font-size:11pt;">${escapeHtml(n)}</li>`; });
+          body += '</ul>';
+        }
+      }
+
+      downloadAsWord(body, `Disponibilites_${MOIS_ASCII[state.currentMonth]}_${state.currentYear}.doc`);
+      showStatus('Document généré.', 'ok');
+      setTimeout(hideStatus, 1500);
+    } catch (e) {
+      console.error(e);
+      showStatus(`Erreur : ${e.message}`, 'error');
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function downloadAsWord(bodyHtml, filename) {
+    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "
+      + "xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>"
+      + "<head><meta charset='utf-8'><title>Export</title></head><body>";
+    const footer = '</body></html>';
+    const source = header + bodyHtml + footer;
+    const blob = new Blob(['\ufeff', source], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   function showStatus(msg, type = 'info') {
