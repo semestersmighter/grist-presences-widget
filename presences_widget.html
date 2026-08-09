@@ -30,10 +30,10 @@
     }
     .btn-today:hover { background: #f3f4f6; border-color: #9ca3af; }
     .btn-export {
-      padding: 8px 12px; border: 1px solid #16a34a; background: #16a34a; color: white;
+      padding: 8px 12px; border: 1px solid #eab308; background: #eab308; color: white;
       border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; margin-left: 8px;
     }
-    .btn-export:hover { background: #15803d; }
+    .btn-export:hover { background: #ca8a04; }
     .weekday-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 8px; }
     .weekday-header {
       text-align: center; font-size: 12px; font-weight: 600; color: #6b7280;
@@ -126,8 +126,8 @@
       <button class="btn-nav" id="next-month">→</button>
     </div>
     <button class="btn-today" id="btn-today">Aujourd'hui</button>
-    <button class="btn-export" id="btn-export">Exporter les disponibilités (Word)</button>
-    <button class="btn-export" id="btn-der-envoyee" style="background:#eab308;">DISPONIBLE DÉFINITIF → DER ENVOYÉE</button>
+    <button class="btn-export" id="btn-export">CREATION DER</button>
+    <button class="btn-export" id="btn-der-envoyee">DER ENVOYÉE</button>
   </div>
 
   <div class="weekday-headers">
@@ -556,7 +556,7 @@
         if (data) {
           const col = data[dayCol(d)] || [];
           for (let i = 0; i < data.id.length; i++) {
-            if (col[i] === 'DISPONIBLE') {
+            if (col[i] === 'DISPONIBLE DÉFINITIF') {
               const p = state.personnel.find(pp => pp.id === data.IdPersonnel[i]);
               noms.push(p ? p.entier : `#${data.IdPersonnel[i]}`);
             }
