@@ -80,11 +80,8 @@
       cursor: pointer; display: flex; align-items: center; gap: 6px;
     }
     .quick-btn.orange { background: #f97316; color: white; }
-    .quick-btn.orange:hover { background: #ea580c; }
     .quick-btn.yellow { background: #facc15; color: #1a1a1a; }
-    .quick-btn.yellow:hover { background: #eab308; }
     .quick-btn.green { background: #16a34a; color: white; }
-    .quick-btn.green:hover { background: #15803d; }
     .v-badge {
       display: inline-flex; align-items: center; justify-content: center;
       width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,0.3);
@@ -228,6 +225,9 @@
       document.getElementById('modal-save').addEventListener('click', saveDay);
       document.querySelectorAll('.quick-btn').forEach(btn => {
         btn.addEventListener('click', () => applyQuickStatus(btn.dataset.statut));
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modalOverlay.classList.contains('show')) closeModal();
       });
     } catch (e) {
       console.error(e);
@@ -468,7 +468,7 @@
 
   async function applyQuickStatus(statut) {
     const selects = modalContent.querySelectorAll('select');
-    selects.forEach(s => { s.value = statut; });
+    selects.forEach(s => { if (s.value === 'DISPONIBLE') s.value = statut; });
     await saveDay();
   }
 
