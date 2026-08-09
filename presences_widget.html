@@ -127,6 +127,7 @@
     </div>
     <button class="btn-today" id="btn-today">Aujourd'hui</button>
     <button class="btn-export" id="btn-export">Exporter les disponibilités (Word)</button>
+    <button class="btn-export" id="btn-der-envoyee" style="background:#eab308;">DISPONIBLE DÉFINITIF → DER ENVOYÉE</button>
   </div>
 
   <div class="weekday-headers">
@@ -145,17 +146,7 @@
     <div class="modal-title" id="modal-title"></div>
     <div class="modal-subtitle" id="modal-subtitle"></div>
     <div class="quick-actions">
-      <div class="quick-actions-left">
-        <button type="button" class="quick-btn orange" data-statut="DER EN COURS" data-depuis="DISPONIBLE">
-          <span class="tooltip">DER en cours</span>
-        </button>
-        <button type="button" class="quick-btn yellow" data-statut="DER SIGNÉE" data-depuis="DER EN COURS">
-          <span class="tooltip">DER signée</span>
-        </button>
-        <button type="button" class="quick-btn green" data-statut="ROC ENVOYÉ" data-depuis="DER SIGNÉE">
-          <span class="tooltip">ROC faite</span>
-        </button>
-      </div>
+      <div class="quick-actions-left"></div>
       <button type="button" class="quick-btn green sf" data-statut="SERVICE FAIT" data-depuis="ROC VALIDÉ">
         SF<span class="tooltip">Service fait</span>
       </button>
@@ -173,7 +164,7 @@
   grist.ready({ requiredAccess: 'full' });
 
   const STATUTS = [
-    "DISPONIBLE", "DER EN COURS", "DER SIGNÉE", "ROC ENVOYÉ", "ROC VALIDÉ",
+    "DISPONIBLE", "DISPONIBLE DÉFINITIF", "DER ENVOYÉE", "ROC ENVOYÉ", "ROC VALIDÉ",
     "ROC REFUSÉ", "ROC ANNULÉ", "ROC SANS RÉPONSE", "SERVICE FAIT",
     "SERVICE NON FAIT", "INDISPONIBLE", "MALADE", "MISSION"
   ];
@@ -248,6 +239,7 @@
       document.getElementById('next-month').addEventListener('click', () => navigateMonth(1));
       document.getElementById('btn-today').addEventListener('click', goToToday);
       document.getElementById('btn-export').addEventListener('click', exportDisponibles);
+      document.getElementById('btn-der-envoyee').addEventListener('click', passerDerEnvoyee);
       document.getElementById('modal-cancel').addEventListener('click', closeModal);
       document.getElementById('modal-delete').addEventListener('click', clearDay);
       document.getElementById('modal-save').addEventListener('click', saveDay);
@@ -508,6 +500,44 @@
     const selects = modalContent.querySelectorAll('select');
     selects.forEach(s => { s.value = ''; });
     await saveDay();
+  }
+
+  async function passerDerEnvoyee() {
+    const moisData = state.mois.find(m => m.annee === state.currentYear && m.mois === state.currentMonth);
+    if (!moisData) { showStatus('Mois non configuré.', 'error'); return; }
+    if (!confirm(`Faire passer tout le monde de DISPONIBLE DÉFINITIF à DER ENVOYÉE pour ${MOIS_LABEL[state.currentMonth]} ${state.currentYear} ?`)) return;
+
+    showStatus('Mise à jour…', 'info');
+    try {
+      await loadMonthTable(state.currentYear, state.currentMonth);
+      const data = state.monthTableData;
+      if (!data) { showStatus('Table du mois introuvable.', 'error'); return; }
+
+      const actions = [];
+      for (let i = 0; i < data.id.length; i++) {
+        const patch = {};
+        for (let d = 1; d <= moisData.nbJours; d++) {
+          const col = dayCol(d);
+          if (data[col] && data[col][i] === 'DISPONIBLE DÉFINITIF') {
+            patch[col] = 'DER ENVOYÉE';
+          }
+        }
+        if (Object.keys(patch).length > 0) {
+          actions.push(['UpdateRecord', state.monthTableId, data.id[i], patch]);
+        }
+      }
+
+      if (actions.length > 0) {
+        await grist.docApi.applyUserActions(actions);
+        await loadMonthTable(state.currentYear, state.currentMonth);
+        await renderCalendar();
+      }
+      showStatus(`${actions.length} personne(s) mise(s) à jour.`, 'ok');
+      setTimeout(hideStatus, 2000);
+    } catch (e) {
+      console.error(e);
+      showStatus(`Erreur : ${e.message}`, 'error');
+    }
   }
 
   async function exportDisponibles() {
