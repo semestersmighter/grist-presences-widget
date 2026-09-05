@@ -532,7 +532,7 @@
   async function passerDerEnvoyee() {
     const moisData = state.mois.find(m => m.annee === state.currentYear && m.mois === state.currentMonth);
     if (!moisData) { showStatus('Mois non configuré.', 'error'); return; }
-    if (!confirm(`Faire passer tout le monde de DISPONIBLE DÉFINITIF à DER ENVOYÉE pour ${MOIS_LABEL[state.currentMonth]} ${state.currentYear} ?`)) return;
+    if (!confirm(`Faire passer tout le monde de DISPONIBLE DÉFINITIF à DER ENVOYÉE et exporter le document pour ${MOIS_LABEL[state.currentMonth]} ${state.currentYear} ?`)) return;
 
     showStatus('Mise à jour…', 'info');
     try {
@@ -559,7 +559,9 @@
         await loadMonthTable(state.currentYear, state.currentMonth);
         await renderCalendar();
       }
-      showStatus(`${actions.length} personne(s) mise(s) à jour.`, 'ok');
+
+      exportByStatut(moisData, 'DER ENVOYÉE', 'DER envoyée', 'DER_Envoyee');
+      showStatus(`${actions.length} personne(s) mise(s) à jour, document généré.`, 'ok');
       setTimeout(hideStatus, 2000);
     } catch (e) {
       console.error(e);
@@ -574,35 +576,40 @@
     showStatus('Génération du document…', 'info');
     try {
       await loadMonthTable(state.currentYear, state.currentMonth);
-      const data = state.monthTableData;
-
-      let body = `<h1 style="font-family:Calibri;font-size:20pt;">Disponibilités — ${MOIS_LABEL[state.currentMonth]} ${state.currentYear}</h1>`;
-
-      for (let d = 1; d <= moisData.nbJours; d++) {
-        const noms = [];
-        if (data) {
-          const col = data[dayCol(d)] || [];
-          for (let i = 0; i < data.id.length; i++) {
-            if (col[i] === 'DISPONIBLE DÉFINITIF') {
-              const p = state.personnel.find(pp => pp.id === data.IdPersonnel[i]);
-              noms.push(p ? p.entier : `#${data.IdPersonnel[i]}`);
-            }
-          }
-        }
-
-        if (noms.length === 0) continue;
-
-        body += `<p style="font-family:Calibri;font-size:12pt;font-weight:bold;margin-top:14pt;margin-bottom:4pt;">- Le ${d} ${MOIS_LABEL[state.currentMonth]} ${state.currentYear} ;</p>`;
-        noms.forEach(n => { body += `<p style="font-family:Calibri;font-size:11pt;margin:0;">${escapeHtml(n)}</p>`; });
-      }
-
-      downloadAsWord(body, `Disponibilites_${MOIS_ASCII[state.currentMonth]}_${state.currentYear}.doc`);
+      exportByStatut(moisData, 'DISPONIBLE DÉFINITIF', 'Disponibilités', 'Disponibilites');
       showStatus('Document généré.', 'ok');
       setTimeout(hideStatus, 1500);
     } catch (e) {
       console.error(e);
       showStatus(`Erreur : ${e.message}`, 'error');
     }
+  }
+
+  // Génère et télécharge un .doc listant, jour par jour, les personnes ayant le statut donné.
+  // Utilise state.monthTableData tel qu'il est au moment de l'appel (à charger avant si besoin).
+  function exportByStatut(moisData, statut, titre, filenamePrefix) {
+    const data = state.monthTableData;
+    let body = `<h1 style="font-family:Calibri;font-size:20pt;">${escapeHtml(titre)} — ${MOIS_LABEL[state.currentMonth]} ${state.currentYear}</h1>`;
+
+    for (let d = 1; d <= moisData.nbJours; d++) {
+      const noms = [];
+      if (data) {
+        const col = data[dayCol(d)] || [];
+        for (let i = 0; i < data.id.length; i++) {
+          if (col[i] === statut) {
+            const p = state.personnel.find(pp => pp.id === data.IdPersonnel[i]);
+            noms.push(p ? p.entier : `#${data.IdPersonnel[i]}`);
+          }
+        }
+      }
+
+      if (noms.length === 0) continue;
+
+      body += `<p style="font-family:Calibri;font-size:12pt;font-weight:bold;margin-top:14pt;margin-bottom:4pt;">- Le ${d} ${MOIS_LABEL[state.currentMonth]} ${state.currentYear} ;</p>`;
+      noms.forEach(n => { body += `<p style="font-family:Calibri;font-size:11pt;margin:0;">${escapeHtml(n)}</p>`; });
+    }
+
+    downloadAsWord(body, `${filenamePrefix}_${MOIS_ASCII[state.currentMonth]}_${state.currentYear}.doc`);
   }
 
   function escapeHtml(str) {
